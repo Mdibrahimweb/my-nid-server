@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Search & ID Card</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+
+<body class="bg-gray-50 min-h-screen p-6 font-sans">
+
+    <div class="max-w-2xl mx-auto">
+        <div class="bg-white p-6 rounded-xl shadow-sm mb-8 border border-gray-100">
+            <h2 class="text-xl font-bold text-gray-800 mb-4">Search User Database</h2>
+            <div class="flex gap-2">
+                <input type="text" id="searchInput" placeholder="Enter ID or Name"
+                    class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                <button onclick="searchUser()"
+                    class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-all">
+                    Search
+                </button>
+            </div>
+        </div>
+
+        <div id="result" class="flex flex-col items-center gap-4 mb-6">
+        </div>
+
+        <div id="actionArea" class="hidden flex flex-wrap justify-center gap-4">
+
+            <button onclick="downloadOriginalImage()"
+                class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-bold shadow-md transition-all">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                Download Original Photo
+            </button>
+        </div>
+    </div>
+
+
+    <script>
+        
+        function downloadOriginalImage() {
+            if (!currentUser || !currentUser.image) {
+                alert("No image found!");
+                return;
+            }
+
+            const imageUrl = currentUser.image; 
+            const fileName = imageUrl.split('/').pop(); 
+
+            const link = document.createElement('a');
+            link.href = imageUrl;
+            link.download = fileName; 
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    </script>
+
+    <script>
+        let currentUser = null;
+
+        async function searchUser() {
+            const q = document.getElementById("searchInput").value;
+            if (!q) return alert("Please enter something to search");
+
+            // Fetch user (আপনার বর্তমান লজিক)
+            const res = await fetch("/search-user?q=" + q);
+            const user = await res.json();
+
+            if (!user) {
+                alert("User Not Found!");
+                return;
+            }
+
+            currentUser = user;
+
+
+
+
+            
+            document.getElementById("actionArea").classList.remove("hidden");
+
+        
+            document.getElementById("result").innerHTML = `
+            <div id="card" class="bg-white w-[400px] border-t-8 border-blue-600 rounded-2xl shadow-2xl overflow-hidden p-6 relative">
+                <div class="flex flex-col items-center">
+                    <div class="w-32 h-32  border-4 border-blue-50 p-1 mb-4">
+                        // <img src="${user.image}" class="w-full h-full object-cover  shadow-md" alt="User">
+                    </div>
+                    <h3 class="text-2xl font-bold text-gray-800 uppercase tracking-tight">${user.name}</h3>
+                    <p class="text-blue-600 font-semibold mb-4 text-sm">ID: ${user.id}</p>
+                </div>
+
+                <div class="space-y-3 text-sm border-t pt-4">
+                    <div class="flex justify-between"><span class="text-gray-500">Father:</span> <span class="font-medium text-gray-800">${user.father}</span></div>
+                    <div class="flex justify-between"><span class="text-gray-500">Mother:</span> <span class="font-medium text-gray-800">${user.mother}</span></div>
+                    <div class="flex justify-between"><span class="text-gray-500">Date of Birth:</span> <span class="font-medium text-gray-800">${user.birth}</span></div>
+                    <div class="flex justify-between border-t pt-2 mt-2"><span class="text-gray-500 italic">Address:</span> <span class="font-medium text-gray-800 text-right">${user.address}</span></div>
+                </div>
+                
+                <div class="mt-6 text-center">
+                   <div class="inline-block px-3 py-1 bg-gray-100 rounded text-[10px] text-gray-400">OFFICIAL ID CARD</div>
+                </div>
+            </div>
+        `;
+        }
+
+        async function downloadPDF() {
+            const { jsPDF } = window.jspdf;
+            const element = document.getElementById("card");
+            if (!element) return;
+
+
+            const canvas = await html2canvas(element, {
+                scale: 3,
+                backgroundColor: null,
+                logging: false
+            });
+
+            const imgData = canvas.toDataURL("image/png");
+            const pdf = new jsPDF('p', 'mm', 'a4');
+
+            pdf.addImage(imgData, "PNG", 15, 20, 180, 0);
+            pdf.save(`${currentUser.name}_ID_Card.pdf`);
+        }
+    </script>
+
+</body>
+
+</html>
